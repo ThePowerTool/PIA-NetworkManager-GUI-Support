@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "port_forwarding.sh"
+echo "Version 1.1"
 # Copyright (C) 2020 Private Internet Access, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,6 +36,48 @@ if [[ ! $PF_GATEWAY || ! $PIA_TOKEN || ! $PF_HOSTNAME ]]; then
 exit 1
 fi
 
+# Curl request: getSignature
+# - uses t_err to capture curl error message when
+#   the SSL cert name is incorrect
+getSig () {
+
+  echo $ curl -s -m 5 \
+      --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \
+      --cacert \"ca.rsa.4096.crt\" \
+      -G --data-urlencode \"token=${PIA_TOKEN}\" \
+      \"https://${PF_HOSTNAME}:19999/getSignature\"
+
+    # Curl request with stdout & stderr capture
+    eval "$( (curl --verbose -m 5 \
+      --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
+      --cacert "ca.rsa.4096.crt" \
+      -G --data-urlencode "token=${PIA_TOKEN}" \
+      "https://${PF_HOSTNAME}:19999/getSignature" ) \
+            2> >(pt_err=$(cat); typeset -p pt_err) \
+             > >(t_std=$(cat); typeset -p t_std) )"
+    payload_and_signature="$t_std"
+    t_err="$pt_err"
+
+}
+
+# Function:  Attempt to correct PIA SSL cert name drift
+getCorrectedSSLCertName () {
+
+    echo "Attempting to correct PIA SSL cert name drift..."
+    echo "Initial curl req:"
+    echo $ curl -s -m 5 \
+        --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \
+        --cacert \"ca.rsa.4096.crt\" \
+        -G --data-urlencode \"token=${PIA_TOKEN}\" \
+        \"https://${PF_HOSTNAME}:19999/getSignature\"
+    echo "-"
+    f="${t_err#*CN=}"      # capture SSL Cert name from curl req stderr
+    PF_HOSTNAME="${f%%;*}" # trim SSL Cert name and update PF_HOSTNAME
+    echo "Corrected PIA SSL Cert Name: $PF_HOSTNAME"
+    echo "Curl req. with corrected PIA SSL Cert Name $PF_HOSTNAME"
+
+}
+
 # The port forwarding system has required two variables:
 # PAYLOAD: contains the token, the port and the expiration date
 # SIGNATURE: certifies the payload originates from the PIA network.
@@ -56,31 +100,24 @@ fi
 # in the env var PAYLOAD_AND_SIGNATURE, and that will be used instead.
 if [[ ! $PAYLOAD_AND_SIGNATURE ]]; then
   echo "Getting new signature..."
-
-echo $ curl -s -m 5 \
-    --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \
-    --cacert \"ca.rsa.4096.crt\" \
-    -G --data-urlencode \"token=${PIA_TOKEN}\" \
-    \"https://${PF_HOSTNAME}:19999/getSignature\"
-
-  payload_and_signature="$(curl -s -m 5 \
-    --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
-    --cacert "ca.rsa.4096.crt" \
-    -G --data-urlencode "token=${PIA_TOKEN}" \
-    "https://${PF_HOSTNAME}:19999/getSignature")"
+  getSig
 else
   payload_and_signature="$PAYLOAD_AND_SIGNATURE"
   echo "Using the following payload_and_signature from the env var:"
 fi
-echo "$payload_and_signature"
-export payload_and_signature
 
 # Check if the payload and the signature are OK.
-# If they are not OK, just stop the script.
+# If they are not OK, try updating the SSL cert name.
 if [ "$(echo "$payload_and_signature" | jq -r '.status')" != "OK" ]; then
   echo "The payload_and_signature variable does not contain an OK status."
-  exit 1
+  getCorrectedSSLCertName
+  # status != OK, call getSig again with corrected SSL Cert Name
+  getSig
 fi
+
+# verify initial or secondary curl request via .status "OK"
+# if not OK, just stop the script.
+if [ "$(echo "$payload_and_signature" | jq -r '.status')" != "OK" ]; then exit 1;fi
 
 # We need to get the signature out of the previous response.
 # The signature will allow the us to bind the port on the server.

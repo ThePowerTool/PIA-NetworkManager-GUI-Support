@@ -1,0 +1,17 @@
+Release Notes for ./port_forwarding.sh
+
+See ReleaseNotes-A.txt for ./pia_NM_profiles_install.sh
+See ReleaseNotes-B.txt for ./get_region_and_token_NM_GUI.sh
+See ReleaseNotes-C.txt for ./port_forwarding.sh
+
+port_forwarding
+Version 1.1
+
+. Moved the curl getSignature request to the getSig function
+  for simplification and to avoid repetition of code (as it's
+  called twice).
+. Created getCorrectedSSLCertName function for the specific case
+  when using static v5 data (provided by get_region_and_token_NM_GUI.sh)
+  and the cert still fails on the SSL cert name.
+. modified the original curl command [getSignature] to collect
+  stdout and stderr allowing capture of the above-referenced case.

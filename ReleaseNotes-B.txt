@@ -1,0 +1,23 @@
+Release Notes for get_region_and_token_NM_GUI.sh
+
+See ReleaseNotes-A.txt for ./pia_NM_profiles_install.sh
+See ReleaseNotes-B.txt for ./get_region_and_token_NM_GUI.sh
+See ReleaseNotes-C.txt for ./port_forwarding.sh
+
+get_region_and_token_NM_GUI.sh
+Version 1.0
+. Upgraded (from v4) to the PIA v5 data 
+
+
+Version 0.9
+
+. added support for .piacredentials
+. added support for live- and static- v4 data (see ReleaseNotes-A.txt)
+. added simplistic, indirect verification of port forwarding support (that
+  port forwarding was actually selected during the install) via "PIApf"
+  pre-fix on NetworkManager profile name.
+
+Details from script introduction:
+# support for ./.pia-credentials is provided:
+# .pia-credentials must be created with only 2 lines.  The 1st line
+# must contain only the pia username and the 2nd, the password.

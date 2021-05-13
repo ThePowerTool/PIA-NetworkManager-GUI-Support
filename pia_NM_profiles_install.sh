@@ -1,22 +1,29 @@
 #!/bin/bash
+echo "./pia_NM_profiles_install.sh"
+echo "Version 0.9"
 #
-# Install OpenVPN profiles in NetworkManager for PIA
+# Install OpenVPN profiles in NetworkManager for PIA and
+# prepare for subsequent port-forwarding requests
 #
-# To reload gnome UI with updated profile filenames
+# Note: To reload gnome UI with updated profile filenames:
 # ]# nmcli con reload
 #
 # New Servers URL:
-# https://serverlist.piaservers.net/vpninfo/servers/v4
+# https://serverlist.piaservers.net/vpninfo/servers/v5
 #
-# Note:  There are 2 request (generateToken, getSignature) required
+# Note:  There are 2 requests (generateToken, getSignature) required
 #        to initiate port forwarding.
 #        generateToken requires live data (from the New Servers URL)
 #        GetSignature requires static data provided by this script
-#           via /var/log/pia-v4-at-install.dat
+#           via /var/log/pia-v5-at-install.dat
 #
 # support for ./.pia-credentials is provided.  As can be seen, below,
 # .pia-credentials must be created with only 2 lines.  The 1st line
-# must contain only the pia username and the 2nd, your password.
+# must contain only the pia username and the 2nd, the password.
+#
+# Next steps:
+# 1.  Determine correct port data (case statement(below) vs data in v5)
+# 2.  Test distribution version validation section, below (deb,rhel,arch)
 
 error() {
 	echo $@ >&2
@@ -70,6 +77,7 @@ fi
 echo
 export PIA_PASS
 
+# Next Step item #2 (currently block-remarked out)
 : <<'END'
 pkgerror="Failed to install the required packages, aborting."
 
@@ -228,11 +236,11 @@ curl -sS -o "./ca.rsa.4096.crt" \
         || error "Failed to download OpenVPN CA certificate, aborting."
 
 IFS=$(echo)
-servers=$(curl -Ss "https://serverlist.piaservers.net/vpninfo/servers/v4" | head -1)
+servers=$(curl -Ss "https://serverlist.piaservers.net/vpninfo/servers/v5" | head -1)
 
-# Save the v4 downloaded and used during install as a static file
+# Save the v5 downloaded and used during install as a static file
 # for getSignature requests via port_forwarding.sh
-echo $servers > "/var/log/pia-v4-at-install.dat"
+echo $servers > "/var/log/pia-v5-at-install.dat"
 
 if [ -z "$servers" ]; then
 	error "Failed to download server list, aborting."
@@ -246,29 +254,37 @@ rm -f "/etc/NetworkManager/system-connections/PIA"*
 # 1st, exit on invalid $pia_tcp string
 if ! [[ "$pia_tcp" = "yes" || "$pia_tcp"="no" ]]; then echo "pia_tcp=$pia_tcp <--should be yes or no. Exiting!";exit 0;fi
 
+
+# Need to know which port is correct (re: Next step item 1):
+#  $pia_port - from $pia_strong case statement (above)
+#  $pia_prot_port - from v5 .groups by protocol
+#  *currently defaulting to the original from case statement
+#   by keeping the pia_port in the profile output
+
+# updated $host to $host_fqname to switch from IP address to PIA balancer
+# This means the if-statements below can be restructured as they
+#   were initially to select protocol-specific IP addresses from v5
+
 if [ "$pia_tcp" = "yes" ]; then 
     pia_protocol="tcp"
-    pia_prot_port=$(echo $groups | jq -r '.ovpntcp[0].ports[]')
+    pia_prot_port=$(echo $groups | jq -r '.ovpntcp[0].ports[0]') # port specified in v5 (currently not used in profile)
     servers="$( echo $servers |
         jq --argjson PF_SUPP "$pia_pf" -r '.regions[] | select(.port_forward==$PF_SUPP) |
-        .servers.ovpntcp[0].ip+":"+.name' )"
+        .dns+":"+.name' )"
 fi
 
 if [ "$pia_tcp" = "no" ]; then 
     pia_protocol="udp"
-    pia_prot_port=$(echo $groups | jq -r '.ovpnudp[0].ports[]')
+    pia_prot_port=$(echo $groups | jq -r '.ovpnudp[0].ports[0]') # port specified in v5 (currently not used in profile)
     servers="$( echo $servers |
         jq --argjson PF_SUPP "$pia_pf" -r '.regions[] | select(.port_forward==$PF_SUPP) |
-        .servers.ovpnudp[0].ip+":"+.name' )"
+        .dns+":"+.name' )"
 fi
 
 echo "$servers" | while read server; do
-	host=$(echo "$server" | cut -d: -f1)
+	host_fqname=$(echo "$server" | cut -d: -f1)
 	name="$PIA_st-"$(echo "$server" | cut -d: -f2)
 	nmfile="/etc/NetworkManager/system-connections/$name"
-
-        # loop to add each port (multiple via "remote=" in profile)
-        remote=$(echo $pia_prot_port | while read f;do echo "remote=$host $f $pia_protocol";done)
 
 	cat <<EOF > "$nmfile"
 [connection]
@@ -281,7 +297,7 @@ autoconnect=false
 service-type=org.freedesktop.NetworkManager.openvpn
 username=$PIA_USER
 comp-lzo=no
-$remote
+remote=$host_fqname $pia_port $pia_protocol
 cipher=$pia_cipher
 auth=$pia_auth
 connection-type=password

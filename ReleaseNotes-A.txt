@@ -1,0 +1,46 @@
+Release Notes for ./pia_NM_profiles_install.sh
+
+See ReleaseNotes-A.txt for ./pia_NM_profiles_install.sh
+See ReleaseNotes-B.txt for ./get_region_and_token_NM_GUI.sh
+See ReleaseNotes-C.txt for ./port_forwarding.sh
+
+pia_NM_profiles_install.sh
+Version 0.9
+
+. Added support for ./.piacredentials
+. Changed PIA server address from IP to fully qualified name (fqname)
+  in front of the PIA balancers
+. Upgraded (from v4) to the PIA v5 data
+. Established 2 key next-steps
+
+Details from script introduction:
+# support for ./.pia-credentials is provided:
+# .pia-credentials must be created with only 2 lines.  The 1st line
+# must contain only the pia username and the 2nd, the password.
+#
+# Next steps:
+# 1.  Determine correct port data (case statement(below) vs data in v5)
+# 2.  Test distribution version validation section, below (deb,rhel,arch)
+
+
+Version 0.8
+
+. Added "PIApf-" prefix to NetworkManager profiles when the install is
+  executed to support port forwarding allowing a simple verification
+  in get_region_and_token_NM_GUI.sh that this script was run and
+  port forwarding was selected.
+. v4 data:  identified v4 data changes frequently and the "downstream"
+            requirements:
+  a) generateToken request requires "live" data from v4
+  b) getSignature request requires "static" data from this install(*)
+
+  Subsequently: 
+  Implemented initial v4 data save to /var/log to create static v4
+     data from this install
+
+* Note:  port_forwarding getSignature curl request will fail on SSL
+         cert name unless static v4 data (from install) is used.
+         This request is only allowed via the PIA VPN; meaning the
+         use of curl -k should work (and did during test) but this
+         script addresses the issue and implements support for the SSL
+         cert for better security.

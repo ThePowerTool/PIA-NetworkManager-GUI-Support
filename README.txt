@@ -5,15 +5,17 @@ port forwarding.
 If you do not require port forwarding simply run the profiles install and use
 the NM-GUI to connect to PIA.
 
-ca.rsa.4096.crt - this cert should only be downloaded directly from PIA.  The
-                  download is part of pia_NM_profiles_install.sh
+ca.rsa.4096.crt    - this cert should only be downloaded directly from PIA.
+                     The download is provided by pia_NM_profiles_install.sh
+pia-v5-at-install.dat - static v5 data created by pia_NM_profiles_install.sh
+                        and saved in /var/log
 pia_NM_profiles_install.sh - installs NetworkManager profiles for PIA
 get_region_and_token_NM_GUI.sh - Request port forwarding
-port_forwarding.sh - run get_region_and_token_NM_GUI.sh which launches
-                     this script
-.pia-credentials - optional: 1st line username, 2nd line password (no quotes,
-                   nothing else). This file must be manually created.
-README.txt - this file
+port_forwarding.sh - this script launched by get_region_and_token_NM_GUI.sh
+                     which also provides CL (on finishing) to launch this script
+.pia-credentials   - optional: 1st line username, 2nd line password (no quotes,
+                     nothing else). This file must be manually created.
+README.txt         - this file
 
 Additional details:
 NetworkManager must be installed before launching any script found here.
@@ -31,9 +33,10 @@ Once you have NetworKManager installed and have run the pia_NM_profiles_install
       c) once the GUI displays a successful connection use the following CL:
          nmcli connection show
          or
-         nmcli connection show [profile name from 1]
+         nmcli connection show [profile name from 1](*)
          or
          nmcli -g name connection show | head -1
+         * Note:  you may need to quote the name (e.g. "Czech Republic")
 
 Troubleshooting:
 If a profile does not connect for any reason you can review the profile details:

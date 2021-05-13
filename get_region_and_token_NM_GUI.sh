@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "get_region_and_token_NM_GUI.sh"
+echo "Version 1.0"
 #
 # Important Note:
 #   This code is not intended for use by anyone.
@@ -16,8 +18,8 @@
 
 # Prerequisites:
 # this script must be launched by root
-# this script must be launched from within ~/git/manual-connections
-# the pia-NewServers-nm v4 output must be in /var/log
+# this script must be launched from within ~/git/PIA-NetworkManager-GUI-Support
+# the pia-NewServers-nm v5 output (pia-v5-at-install.dat) must be in /var/log
 # support for ./.pia-credentials is provided.  As can be seen, below,
 # .pia-credentials must be created with only 2 lines.  The 1st line
 # must contain only the pia username and 2nd, your password.
@@ -29,9 +31,9 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 # Verify NetworkManager profiles were installed
-if [[ ! -f /var/log/pia-v4-at-install.dat ]];
+if [[ ! -f /var/log/pia-v5-at-install.dat ]];
    then echo "Installation of NetworkManager profiles not found."
-        echo "/var/log/pia-v4-at-install.dat should have been created."
+        echo "/var/log/pia-v5-at-install.dat should have been created."
    exit 0
 fi
 # Check for ./.pia-credentials.  If found, load username and password
@@ -125,16 +127,16 @@ if [ "${!exitflag[*]}" = "" ]; then echo "No VPN connections found."; exit 0;fi
 
 # Get Server Name and detail
 # Note: serverlist_url must be the current list for the generateToken request
-serverlist_url='https://serverlist.piaservers.net/vpninfo/servers/v4'
+serverlist_url='https://serverlist.piaservers.net/vpninfo/servers/v5'
 
 # Note: serverlist_from_install must be from the initial pia nm install
-#       serverlist (saved as "/var/log/pia-v4-at-install.dat")
-serverlist_from_install="$(cat /var/log/pia-v4-at-install.dat)"
+#       serverlist (saved as "/var/log/pia-v5-at-install.dat")
+serverlist_from_install="$(cat /var/log/pia-v5-at-install.dat)"
 
 # get Live Regional Data (lrd)
-lrd="$(curl -s https://serverlist.piaservers.net/vpninfo/servers/v4 | head -1)"
+lrd="$(curl -s https://serverlist.piaservers.net/vpninfo/servers/v5 | head -1)"
 
-# Get NM Profile Name from nmcli name, remove PIA prefix (to match v4 db region.name)
+# Get NM Profile Name from nmcli name, remove PIA prefix (to match v5 db region.name)
 PIAnmname=$(nmcli -g name connection show | head -1)
 echo "PIAnmname=$PIAnmname" # (e.g. "PIApf-Name") the nm profile name
 
@@ -150,11 +152,11 @@ fi
 
 len=${#PIAnmname}
 PIAname=${PIAnmname:6:$len} # Remove the "PIApf-" prefix
-echo "PIAname='$PIAname'"   # now just "Name" (region.name from v4 data structure)
+echo "PIAname='$PIAname'"   # now just "Name" (region.name from v5 data structure)
 
 # with the correct Name (data structure region.name) from the profile get variables
 
-# get ovpntcp.ip, ovpntcp.cn, meta.ip, meta.cn from the initial install serverlist (v4) $serverlist_from_install
+# get ovpntcp.ip, ovpntcp.cn, meta.ip, meta.cn from the initial install serverlist (v5) $serverlist_from_install
 oip="$(echo $serverlist_from_install | jq --arg R_NAME "$PIAname" -r '.regions[] | select(.name==$R_NAME) | .servers.ovpntcp[0].ip')"
 ocn="$(echo $serverlist_from_install | jq --arg R_NAME "$PIAname" -r '.regions[] | select(.name==$R_NAME) | .servers.ovpntcp[0].cn')"
 mip="$(echo $serverlist_from_install | jq --arg R_NAME "$PIAname" -r '.regions[] | select(.name==$R_NAME) | .servers.meta[0].ip')"
@@ -173,7 +175,7 @@ echo "meta[0].cn=$mcn"
 echo "meta[0].cn=$lmcn - live [current] PF_HOSTNAME for generateToken req"
 
 echo "Sending token request, authenticating with the meta service..."
-# This curl req for generateToken uses the live (current) v4 data
+# This curl req for generateToken uses the live (current) v5 data
 
 # display CL (embedded code in generateTokenResponse, below)
 echo $ curl -s -u \"$PIA_USER:$PIA_PASS\" \
@@ -207,8 +209,6 @@ if [ "$PIA_PF" != true ]; then
 fi
 
 # PF_GATEWAY for port_forwarding.sh (local gateway e.g. 10.x.x.1)
-# PF_GATEWAY="$( cat /opt/piavpn-manual/route_info )" # (for manual connect)
-
 # obtain local gateway IP from NM via nmcli
 gatewayip=$(nmcli con show "PIApf-$PIAname" | grep IP4.GATEWAY)
 # e.g.: "IP4.GATEWAY:                            10.20.111.1"
@@ -217,8 +217,6 @@ PF_GATEWAY=${gatewayip##I*\ }
 echo "PIA_TOKEN=$PIA_TOKEN"
 echo "PF_GATEWAY=$PF_GATEWAY"
 echo "meta.cn=$mcn"
-# echo "PIA_USER=$PIA_USER"
-# echo "PIA_PASS=$PIA_PASS"
 
 # Show execute command for the standard PIA script, "port_forwarding.sh"
 # Note:  this command can be copied and pasted to a bash CL to run manually

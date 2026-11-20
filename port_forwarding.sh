@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "port_forwarding.sh"
-echo "Version 1.1"
+echo "Version 1.3"
 # Copyright (C) 2020 Private Internet Access, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,83 +21,76 @@ echo "Version 1.1"
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# Verify required utilities and CA certificate
+for cmd in curl jq base64; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Required dependency '$cmd' is missing. Please install it and try again."
+    exit 1
+  fi
+done
+
+if [[ ! -f "./ca.rsa.4096.crt" ]]; then
+  echo "Missing ./ca.rsa.4096.crt in the current directory."
+  echo "Please run this script from your PIA-NetworkManager-GUI-Support directory."
+  exit 1
+fi
 
 # Check if the mandatory environment variables are set.
 if [[ ! $PF_GATEWAY || ! $PIA_TOKEN || ! $PF_HOSTNAME ]]; then
-  echo This script requires 3 env vars:
-  echo PF_GATEWAY  - the IP of your gateway
-  echo PF_HOSTNAME - name of the host used for SSL/TLS certificate verification
-  echo PIA_TOKEN   - the token you use to connect to the vpn services
+  echo "This script requires 3 env vars:"
+  echo "  PF_GATEWAY  - the IP of your gateway"
+  echo "  PF_HOSTNAME - name of the host used for SSL/TLS certificate verification"
+  echo "  PIA_TOKEN   - the token you use to connect to the vpn services"
   echo
-  echo An easy solution is to just run get_region_and_token.sh
-  echo as it will guide you through getting the best server and
-  echo also a token. Detailed information can be found here:
-  echo https://github.com/pia-foss/manual-connections
-exit 1
+  echo "An easy solution is to run get_region_and_token_NM_GUI.sh"
+  echo "as it will obtain the active gateway, hostname, and token automatically."
+  echo "Original PIA reference repo:"
+  echo "https://github.com/pia-foss/manual-connections"
+  exit 1
 fi
 
 # Curl request: getSignature
-# - uses t_err to capture curl error message when
-#   the SSL cert name is incorrect
+# Captures stdout and stderr cleanly without eval race conditions
 getSig () {
+  local err_file
+  err_file=$(mktemp)
 
-  echo $ curl -s -m 5 \
-      --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \
-      --cacert \"ca.rsa.4096.crt\" \
-      -G --data-urlencode \"token=${PIA_TOKEN}\" \
-      \"https://${PF_HOSTNAME}:19999/getSignature\"
+  echo "\$ curl -s -m 5 \\"
+  echo "    --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \\"
+  echo "    --cacert \"ca.rsa.4096.crt\" \\"
+  echo "    -G --data-urlencode \"token=${PIA_TOKEN}\" \\"
+  echo "    \"https://${PF_HOSTNAME}:19999/getSignature\""
 
-    # Curl request with stdout & stderr capture
-    eval "$( (curl --verbose -m 5 \
-      --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
-      --cacert "ca.rsa.4096.crt" \
-      -G --data-urlencode "token=${PIA_TOKEN}" \
-      "https://${PF_HOSTNAME}:19999/getSignature" ) \
-            2> >(pt_err=$(cat); typeset -p pt_err) \
-             > >(t_std=$(cat); typeset -p t_std) )"
-    payload_and_signature="$t_std"
-    t_err="$pt_err"
+  payload_and_signature=$(curl --verbose -m 5 \
+    --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
+    --cacert "ca.rsa.4096.crt" \
+    -G --data-urlencode "token=${PIA_TOKEN}" \
+    "https://${PF_HOSTNAME}:19999/getSignature" 2>"$err_file")
 
+  t_err=$(<"$err_file")
+  rm -f "$err_file"
 }
 
-# Function:  Attempt to correct PIA SSL cert name drift
+# Function: Attempt to correct PIA SSL cert name drift
 getCorrectedSSLCertName () {
+  echo "Attempting to correct PIA SSL cert name drift..."
 
-    echo "Attempting to correct PIA SSL cert name drift..."
-    echo "Initial curl req:"
-    echo $ curl -s -m 5 \
-        --connect-to \"$PF_HOSTNAME::$PF_GATEWAY:\" \
-        --cacert \"ca.rsa.4096.crt\" \
-        -G --data-urlencode \"token=${PIA_TOKEN}\" \
-        \"https://${PF_HOSTNAME}:19999/getSignature\"
-    echo "-"
-    f="${t_err#*CN=}"      # capture SSL Cert name from curl req stderr
-    PF_HOSTNAME="${f%%;*}" # trim SSL Cert name and update PF_HOSTNAME
-    echo "Corrected PIA SSL Cert Name: $PF_HOSTNAME"
-    echo "Curl req. with corrected PIA SSL Cert Name $PF_HOSTNAME"
+  if [[ "$t_err" != *"CN="* ]]; then
+    echo "No SSL 'CN=' field found in curl output (request may have timed out or been refused)."
+    echo "Curl stderr:"
+    echo "$t_err"
+    exit 1
+  fi
 
+  local f="${t_err#*CN=}"       # strip everything up to CN=
+  f="${f%%[;,[:space:]]*}"       # strip trailing ; , or whitespace/newline
+  PF_HOSTNAME="$f"
+
+  echo "Corrected PIA SSL Cert Name: $PF_HOSTNAME"
+  echo "Retrying getSignature with corrected PIA SSL Cert Name $PF_HOSTNAME..."
 }
 
-# The port forwarding system has required two variables:
-# PAYLOAD: contains the token, the port and the expiration date
-# SIGNATURE: certifies the payload originates from the PIA network.
-
-# Basically PAYLOAD+SIGNATURE=PORT. You can use the same PORT on all servers.
-# The system has been designed to be completely decentralized, so that your
-# privacy is protected even if you want to host services on your systems.
-
-# You can get your PAYLOAD+SIGNATURE with a simple curl request to any VPN
-# gateway, no matter what protocol you are using. Considering WireGuard has
-# already been automated in this repo, here is a command to help you get
-# your gateway if you have an active OpenVPN connection:
-# $ ip route | head -1 | grep tun | awk '{ print $3 }'
-# This section will get updated as soon as we created the OpenVPN script.
-
-# Get the payload and the signature from the PF API. This will grant you
-# access to a random port, which you can activate on any server you connect to.
-# If you already have a signature, and you would like to re-use that port,
-# save the payload_and_signature received from your previous request
-# in the env var PAYLOAD_AND_SIGNATURE, and that will be used instead.
+# Get the payload and the signature from the PF API.
 if [[ ! $PAYLOAD_AND_SIGNATURE ]]; then
   echo "Getting new signature..."
   getSig
@@ -108,43 +101,31 @@ fi
 
 # Check if the payload and the signature are OK.
 # If they are not OK, try updating the SSL cert name.
-if [ "$(echo "$payload_and_signature" | jq -r '.status')" != "OK" ]; then
+if [ "$(echo "$payload_and_signature" | jq -r '.status' 2>/dev/null)" != "OK" ]; then
   echo "The payload_and_signature variable does not contain an OK status."
   getCorrectedSSLCertName
-  # status != OK, call getSig again with corrected SSL Cert Name
   getSig
 fi
 
-# verify initial or secondary curl request via .status "OK"
-# if not OK, just stop the script.
-if [ "$(echo "$payload_and_signature" | jq -r '.status')" != "OK" ]; then exit 1;fi
+# Verify initial or secondary curl request via .status "OK"
+if [ "$(echo "$payload_and_signature" | jq -r '.status' 2>/dev/null)" != "OK" ]; then
+  echo "Failed to obtain a valid signature from getSignature. Exiting."
+  exit 1
+fi
 
-# We need to get the signature out of the previous response.
-# The signature will allow the us to bind the port on the server.
+# Extract signature and base64-decoded payload fields
 signature="$(echo "$payload_and_signature" | jq -r '.signature')"
-
-# The payload has a base64 format. We need to extract it from the
-# previous response and also get the following information out:
-# - port: This is the port you got access to
-# - expires_at: this is the date+time when the port expires
 payload="$(echo "$payload_and_signature" | jq -r '.payload')"
 port="$(echo "$payload" | base64 -d | jq -r '.port')"
-
-# The port normally expires after 2 months. If you consider
-# 2 months is not enough for your setup, please open a ticket.
 expires_at="$(echo "$payload" | base64 -d | jq -r '.expires_at')"
 
-# Display some information on the screen for the user.
 echo "The signature is OK.
 
 --> The port is $port and it will expire on $expires_at. <--
 
 Trying to bind the port..."
 
-# Now we have all required data to create a request to bind the port.
-# We will repeat this request every 15 minutes, in order to keep the port
-# alive. The servers have no mechanism to track your activity, so they
-# will just delete the port forwarding if you don't send keepalives.
+# Repeat bindPort request every 15 minutes to keep the port alive
 while true; do
   bind_port_response="$(curl -Gs -m 5 \
     --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
@@ -152,18 +133,16 @@ while true; do
     --data-urlencode "payload=${payload}" \
     --data-urlencode "signature=${signature}" \
     "https://${PF_HOSTNAME}:19999/bindPort")"
-    echo "$bind_port_response"
+  echo "$bind_port_response"
 
-    # If port did not bind, just exit the script.
-    # This script will exit in 2 months, since the port will expire.
-    export bind_port_response
-    if [ "$(echo "$bind_port_response" | jq -r '.status')" != "OK" ]; then
-      echo "The API did not return OK when trying to bind port. Exiting."
-      exit 1
-    fi
-    echo Port $port refreshed on $(date). \
-      This port will expire on $(date --date="$expires_at")
+  export bind_port_response
+  if [ "$(echo "$bind_port_response" | jq -r '.status' 2>/dev/null)" != "OK" ]; then
+    echo "The API did not return OK when trying to bind port. Exiting."
+    exit 1
+  fi
+  echo "Port $port refreshed on $(date). This port will expire on $(date --date="$expires_at")"
 
-    # sleep 15 minutes
-    sleep 900
+  # sleep 15 minutes
+  sleep 900
 done
+

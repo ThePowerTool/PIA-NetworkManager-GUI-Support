@@ -20,8 +20,10 @@ If you do not require port forwarding, simply run `pia_NM_profiles_install.sh` (
 
 ## Prerequisites
 
-1. **NetworkManager & OpenVPN Plugin**: NetworkManager (`nmcli`) and its OpenVPN plugin (e.g., `network-manager-openvpn` on Debian/Ubuntu or `NetworkManager-openvpn` on Fedora/RHEL) must be installed, along with `curl`, `jq`, and `uuidgen`.
-2. **Desktop NM-GUI**: A desktop NetworkManager applet/GUI (GNOME, KDE Plasma, XFCE, etc.) to select and toggle VPN connections.
+1. **Private Internet Access (PIA) Account & `sudo`/`root` Access**: Required to authenticate with PIA's API and write profiles to `/etc/NetworkManager/system-connections/`.
+2. **NetworkManager & OpenVPN**: `NetworkManager` (`nmcli`), `openvpn`, and the NetworkManager OpenVPN plugin (`NetworkManager-openvpn` on Fedora/RHEL or `network-manager-openvpn` on Debian/Ubuntu).
+3. **CLI Utilities**: `curl`, `jq`, `uuidgen` (`util-linux`), and `ip` (`iproute` / `iproute2`).
+4. **Desktop NM-GUI**: A desktop NetworkManager applet/GUI (GNOME, KDE Plasma, XFCE, etc.) to select and toggle VPN connections.
 
 ---
 

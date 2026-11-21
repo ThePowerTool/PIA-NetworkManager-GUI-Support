@@ -76,6 +76,7 @@ echo
 ######################################################################
 # Port Forwarding Select
 # Set to "true" or "false" to match JSON key .port_forward
+echo "Important Note:  PIA does not offer port-forwarding on US servers."
 read -rp "Will you require port forwarding Y/n (Y): " pia_pf
 
 case "$pia_pf" in

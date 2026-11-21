@@ -98,4 +98,4 @@ Leave the terminal running (or run it inside `tmux` / `screen`) so `port_forward
   * Replaced `eval` process substitution with deterministic `mktemp` stderr capture for `getSignature`.
   * Hardened `CN=` certificate subject extraction across OpenSSL/GnuTLS `curl` builds when handling PIA TLS certificate name drift.
   * Added startup checks for required tools (`curl`, `jq`, `base64`) and `./ca.rsa.4096.crt`.
-
+  * Moved from "ReleaseNotes-C.txt" to README.md for all continuing version history.

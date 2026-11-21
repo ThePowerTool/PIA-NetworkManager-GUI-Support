@@ -85,6 +85,7 @@ Leave the terminal running (or run it inside `tmux` / `screen`) so `port_forward
 
 ## Version History
 
+* Moved from "ReleaseNotes-C.txt" to README.md for all continuing version history.
 * **`pia_NM_profiles_install.sh` (`v1.1`)**
   * Updated server list endpoint from `v5` to `v6` (`pia-v6-at-install.dat`) and filtered out offline regions.
   * Downloaded PIA's Next-Gen `ca.rsa.4096.crt` from `pia-foss/manual-connections` for port forwarding while keeping OpenVPN CA certificates separate under `/etc/openvpn/`.
@@ -98,4 +99,3 @@ Leave the terminal running (or run it inside `tmux` / `screen`) so `port_forward
   * Replaced `eval` process substitution with deterministic `mktemp` stderr capture for `getSignature`.
   * Hardened `CN=` certificate subject extraction across OpenSSL/GnuTLS `curl` builds when handling PIA TLS certificate name drift.
   * Added startup checks for required tools (`curl`, `jq`, `base64`) and `./ca.rsa.4096.crt`.
-  * Moved from "ReleaseNotes-C.txt" to README.md for all continuing version history.

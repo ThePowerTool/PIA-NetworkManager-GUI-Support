@@ -8,7 +8,7 @@ If you do not require port forwarding, simply run `pia_NM_profiles_install.sh` (
   If you're tired of websites blocking VPN traffic!
   Note: While this disguises VPN traffic, it doesn't prevent IP tracking by
         cloud security services.  Switching exit-points can leave you with an
-        undocumented (tracked) public IP.
+        undocumented (not-yet-tracked) public IP.
 
 Support for PIA Obfuscation has been added under ./PIA-OC.  NetworkManager and GNOME do not, at this time, include support for integration into the graphical environment.  This support is made available via CL-only.  See [./PIA-OC/README.md](./PIA-OC/README.md) for additional information
 

@@ -1,2 +1,5 @@
 ca.rsa.4096.crt
 .pia-credentials
+O-PIA-NMprofiles/
+pia-v6-servers.dat
+*.tmp

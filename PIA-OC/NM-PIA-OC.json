@@ -1,0 +1,26 @@
+{
+    "servers": [
+        {"tag": "Seattle", "server": "158.173.153.3", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "US-East", "server": "173.244.56.3", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "NewJersey", "server": "37.19.198.236", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "SouthWest", "server": "156.146.38.168", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "Vancouver", "server": "149.22.95.120", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "Amsterdam", "server": "158.173.20.167", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "Swiss", "server": "158.173.152.168", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "UK-London", "server": "158.173.24.76", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "UK-Manch", "server": "141.98.101.181", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"},
+        {"tag": "Japan", "server": "149.22.87.204", "server_port": 443, "password": "shadowsocks", "method": "aes-128-gcm"}
+    ],
+    "locals": [
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1080, "server": "Seattle"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1081, "server": "US-East"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1082, "server": "NewJersey"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1083, "server": "SouthWest"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1084, "server": "Vancouver"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1085, "server": "Amsterdam"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1086, "server": "Swiss"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1087, "server": "UK-London"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1088, "server": "UK-Manch"},
+        {"protocol": "socks", "local_address": "127.0.0.1", "local_port": 1089, "server": "Japan"}
+    ]
+}
